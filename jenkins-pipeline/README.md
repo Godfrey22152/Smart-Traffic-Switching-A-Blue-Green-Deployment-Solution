@@ -397,7 +397,7 @@ The pipeline includes an email notification step, sending a summary of the build
 ---
 
 ### The Pipeline Code
-Refer to the full pipeline code [here](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/blob/main/Jenkinsfile).
+Refer to the full pipeline code **[Here](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/blob/main/Jenkinsfile)**.
 
 ---
 ### NOTE: Pipeline Stage Code Generation using Pipeline Syntax
@@ -433,7 +433,7 @@ To execute the pipeline in Jenkins, follow these streamlined steps:
    - Check that credentials (`git-cred`, `sonar-token`, `docker-cred`, `k8-cred`, `email-cred`) are configured.
      
 2. **Ensure all Necessary Manifest Files are added and updated**  
-   - Ensure the Kubernetes manifest files are available in the **Manifest_Files](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/tree/main/Manifest_Files)** directory of the project repository:
+   - Ensure the Kubernetes manifest files are available in the **[Manifest_Files](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/tree/main/Manifest_Files)** directory of the project repository:
      - `app-deployment-blue.yaml`
      - `app-deployment-green.yaml`
      - `trainbook-secrets.yaml`
@@ -470,29 +470,90 @@ To execute the pipeline in Jenkins, follow these streamlined steps:
        NAME               CLASS   HOSTS           ADDRESS          PORTS   AGE
        trinbook-ingress   nginx   trainbook.com   XXXXXXXXXXXXXX   80      68s
        ```
-   
-6. **Verify Pod Readiness**
-- Check that the `trainbook-app` pod in either the **blue** or `green` environment is running and ready:
-  ```bash
-  kubectl get pods -l version=blue -n webapps
-  kubectl get pods -l version=green -n webapps
-  ```  
 
-7. **Review Notifications**
+6. **Review Notifications**
    - The pipeline sends an email with the build status. Verify that notifications are correctly set up for alerts on build status.
+     
+7. **Verify Pod Readiness**
+   - Check that the `trainbook-app` pod in either the **blue** or **green** environments are running and ready:
+   ```bash
+   kubectl get pods -l version=blue -n webapps
+   kubectl get pods -l version=green -n webapps
+   ```
+   - Ensure the `READY` column shows `1/1` and the `STATUS` is `Running` as shown below:
    
+     ```bash
+     NAME                                  READY   STATUS    RESTARTS     AGE
+     trainbook-app-blue-556b67bb58-vg8z7   1/1     Running   0            65m  
+     trainbook-app-green-67bcb8d89d-jcg2k  1/1     Running   0            30m
+     ```
+8. **Verify Service Configuration**
+   - Confirm that the `trainbook-service` is running and exposing the application correctly:
+
+     ```bash
+     kubectl get svc trainbook-service -n webapps
+     
+     NAME                TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+     trainbook-service   ClusterIP   10.110.140.55   <none>        80/TCP    2h
+     ```
+     - Ensure the service type is **ClusterIP** and the port is `80/TCP`.
+  
+9. **Verify Ingress Configuration**
+   - Check the status of the ingress resource:
+
+     ```bash
+     kubectl get ingress trinbook-ingress -n webapps
+     
+     NAME               CLASS   HOSTS           ADDRESS          PORTS   AGE
+     trinbook-ingress   nginx   trainbook.com   XXXXXXXXXXXXXX   80      2h
+     ```
+     - Confirm the following:
+       - The `HOSTS` column contains `trainbook.com`.
+       - The `ADDRESS` column displays the correct external IP (e.g., `ae33145266d546673c0263t678cb19a31540-1815147026.us-east-1.elb.amazonaws.com`).
+       - The `PORTS` column includes port `80`.
+
+10. **Update Public DNS Records**
+    - To make `trainbook.com` accessible remotely, update your public DNS records to point to the external IP of the ingress (e.g., `ae33145266d546673c0263t678cb19a31540-1815147026.us-east-1.elb.amazonaws.com`):
+       1. Log in to your domain registrar's DNS management console.
+       2. Add an A Record with the following details:
+          - Name: `@` or `trainbook.com`
+          - Type: A
+          - Value: `ae33145266d546673c0263t678cb19a31540-1815147026.us-east-1.elb.amazonaws.com`
+
+       3. Save the changes.
+          > **Note:** DNS propagation may take some time (usually a few minutes to a few hours).
+
+11. **Access the Application over the browser**
+    - Once DNS is updated and firewalls are configured, test accessing the application:
+       1. Open a web browser and navigate to:
+          ```bash
+          http://trainbook.com
+          ```
+       2. You should see the deployed Trainbook application.
+
 ---
 
+
 ## Screenshots 
+
+### Deployed Trainbook Application
+![trainbook-application](screenshots/trainbook-application.png)
+![trainbook-application](screenshots/trainbook-application_2.png)
+
+### Pipeline Build with Parameters Trigger
+![Trigger the Pipeline](screenshots/blue_tag-parameterized.png)
+![Trigger the Pipeline](screenshots/green_tag-parameterized.png)
+
+### Email Notification with the Build Status
+![Email-Status-Blue](screenshots/email-blue-success.png)
+![Email-Status-Green](screenshots/email-green-success.png)
+![Email-Status-failed](screenshots/email-failed.png)
 
 ### project-credentials
 ![project-credentials](screenshots/project-credentials.png)
 
 ### SonarQube Server Personal Access token (PAT)
 ![SonarQube Server PAT](screenshots/sonar-token.png)
-
-### Pipeline Trigger
-![Trigger the Pipeline](screenshots/docker_tag-parameterized.png)
 
 ### Managed Files For Nexus Server
 ![Managed Nexus Server Files](screenshots/manged-nexus-server-files.png)
