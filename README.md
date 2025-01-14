@@ -6,9 +6,13 @@
 3. [Prerequisites](#prerequisites)
 4. [Technologies Used](#technologies-used)
 5. [Pipeline Details](#pipeline-details)
-6. [How to Use](#how-to-use)
-7. [Troubleshooting](#troubleshooting)
-8. [Contributing](#contributing)
+6. [Steps to Run the Jenkins Pipeline](#steps-to-run-the-jenkins-pipeline)
+7. [Why Both Blue and Green Deployment Environment Pods Should Be Left in the Cluster](#why-both-blue-and-green-deployment-environment-pods-should-be-left-in-the-cluster)
+8. [Checking the Current Environment - Blue or Green](#checking-the-current-environment---blue-or-green)
+9. [Switching Traffic Manually Between Environments in the Cluster](#switching-traffic-manually-between-environments-in-the-cluster)
+10. [Troubleshooting](#troubleshooting)
+11. [Additional Resources](#additional-resources)
+12. [Contributing](#contributing)
 
 ## Overview
 
@@ -130,6 +134,7 @@ Each stage is designed to ensure a seamless, secure, and efficient CI/CD workflo
 - **For a detailed guide on setting up the CI pipeline, refer to the `README.md` file in the [jenkins-pipeline](./jenkins-pipeline/README.md) folder**. 
 
 ---
+
 ## Steps to Run the Jenkins Pipeline
 
 To execute the pipeline in Jenkins, follow these streamlined steps:
@@ -236,43 +241,124 @@ To execute the pipeline in Jenkins, follow these streamlined steps:
           http://trainbook.com
           ```
        2. You should see the deployed Trainbook application.
+ 
+
+---
+## Why Both Blue and Green Deployment Environment Pods Should Be Left in the Cluster
+
+Leaving both **blue** and **green** deployment environment pods in the cluster ensures a robust and flexible deployment strategy. Here's why this approach is beneficial:
+
+1. **Seamless Rollbacks**  
+   - If an issue arises with the currently active environment (e.g., blue), the green environment remains available and can be switched back quickly without redeployment. This ensures minimal downtime and faster recovery.
+
+2. **Testing and Validation**  
+   - The inactive environment (e.g., green) can be used for further testing and validation of new features or updates without impacting the live environment. This promotes a safer and more controlled deployment process.
+
+3. **Traffic Splitting**  
+   - Having both environments active allows for advanced deployment strategies like **canary deployments** or **A/B testing**, where traffic is gradually split between the blue and green environments to observe performance and user behavior.
+
+4. **Disaster Recovery**  
+   - In the event of unexpected failures, having both environments ensures that one environment remains operational, significantly reducing downtime and maintaining service availability.
+
+5. **Simplified Deployment Workflow**  
+   - Leaving both environments active eliminates the need for re-provisioning pods during every switch. This saves time and resources, especially in high-traffic applications requiring frequent updates.
+
+6. **Consistency Across Updates**  
+   - Both environments ensure that the cluster has a backup ready for use, maintaining operational consistency while changes are being applied.
+
+By maintaining both blue and green environments in the cluster, organizations can achieve high availability, enhance deployment flexibility, and minimize risks during updates or transitions. 
+
 ---
 
-## Screenshots
+## Checking the Current Environment - Blue or Green
+
+To determine whether the **blue** or **green** environment is currently serving traffic, follow these steps:
+
+- **Inspect the Service Selector**
+   - The service `trainbook-service` uses a selector to determine which pods it routes traffic to. You can check the selector's value to see the currently active environment.
+
+   Run the following command:
+   ```bash
+   kubectl get service trainbook-service -n webapps -o yaml
+   ```
+   Look for the `spec.selector` field in the output. For example:
+   
+   ```bash
+   spec:
+     selector:
+       app: trainbook-app
+       version: blue
+   ```
+   In this case, the active environment is **blue**.
+   
+---
+## Switching Traffic manually Between Environments in the cluster. 
+- **You can Switch Traffic manually in the cluster at any moment without running the pipeline**.  
+  **How To Do This**:
+   - Verify the service selector:
+   ```bash
+   kubectl get svc trainbook-service -n webapps -o yaml
+   ```
+   - Update the selector manually specifying the environment (`green` or `blue`):
+   ```bash
+   kubectl patch service trainbook-service -p '{"spec": {"selector": {"app": "trainbook-app", "version": "green"}}}' -n webapps
+   ```
+---
+## Screenshots 
 
 ### 1. Deployed TrainBooking application Images.
-![TrainBooking application Images](screenshots/trainbook1.png)
-![TrainBooking application Images](screenshots/trainbook2.png)
-![TrainBooking application Images](screenshots/trainbook3.png)
-![TrainBooking application Images](screenshots/trainbook4.png)
-![TrainBooking application Images](screenshots/trainbook5.png)
-![TrainBooking application Images](screenshots/trainbook6.png)
-![TrainBooking application Images](screenshots/trainbook7.png) 
+![trainbook-application](screenshots/trainbook-application.png)
+![trainbook-application](screenshots/trainbook-application_2.png)
+![trainbook-application](screenshots/trainbook-application_3.png)
+![trainbook-application](screenshots/trainbook-application_4.png)
+![trainbook-application](screenshots/trainbook-application_5.png)
+![trainbook-application](screenshots/trainbook-application_6.png)
 
-### 2. Jenkins Dashboard
-![Jenkins dashboard](screenshots/Jenkins-dashboard.png)
-![Parameterized Docker Tag](screenshots/docker_tag-parameterized.png)
+### 2. Pipeline Build with Parameters Trigger
+![Trigger the Pipeline](screenshots/blue_tag-parameterized.png)
+![Trigger the Pipeline](screenshots/green_tag-parameterized.png)
 
-### 3. Jenkins Stage view
+### 3. Email Notification with the Build Status
+![Email-Status-Blue](screenshots/email-blue-success.png)
+![Email-Status-Green](screenshots/email-green-success.png)
+![Email-Status-failed](screenshots/email-failed.png)
+
+### 4. Jenkins Dashboard
+![Jenkins dashboard](screenshots/Jenkins-dashboard2.png)
+![Jenkins dashboard](screenshots/build2-parameter.png)
+![Jenkins dashboard](screenshots/build3-parameter.png)
+
+### 5. Jenkins Stage view
 ![Jenkins Stage view](screenshots/pipeline-stage-view1.png)
 ![Jenkins Stage view](screenshots/pipeline-stage-view2.png)
 
-### 4. Nexus Web View
-![Nexus Web View](screenshots/nexus.png)
+### 6. project-credentials
+![project-credentials](screenshots/project-credentials.png)
 
-### 5. SonarQube Server Web View
-![Sonarqube-server Web View](screenshots/sonarqube-server.png)
+### 7. SonarQube Server Personal Access token (PAT)
+![SonarQube Server PAT](screenshots/sonar-token.png)
 
+### 8. SonarQube Server Web View
+![SonarQube Web View](screenshots/sonarqube.png)
 
-### 6. Jenkins Email Notification on Build Success/Failure.
-![Successful Build](screenshots/success.jpg)
+### 9. Managed Files For Nexus Server
+![Managed Nexus Server Files](screenshots/nexus.png)
 
-![Failed Build](screenshots/failure.jpg) 
-
+---
 ## Troubleshooting
 - **Pipeline Errors**: Check the Jenkins console logs for detailed error messages.
 - **Deployment Failures**: Verify Kubernetes resources and logs for troubleshooting.
 - **Email Notifications**: Ensure SMTP settings are correctly configured in Jenkins.
+- For a detailed guide please see **[Troubleshooting Guide](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/tree/main/jenkins-pipeline#troubleshooting-guide)** 
 
+---
+## Additional Resources
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Jenkins Plugins](https://plugins.jenkins.io/)
+- [SonarQube](https://www.sonarqube.org/)
+- [Trivy](https://aquasecurity.github.io/trivy/)
+- [Docker](https://www.docker.com/)
+
+---
 ## Contributing
 Contributions are welcome! Feel free to open issues or submit pull requests.
