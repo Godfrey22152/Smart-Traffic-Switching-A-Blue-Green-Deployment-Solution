@@ -18,20 +18,21 @@ This guide will walk you through setting up the Jenkins pipeline from scratch, i
    - `sonar-server`: SonarQube server configuration Token.
    - `email-cred`: Gmail app-password for Email Notification.
 
-3. **[Tools Installed on Jenkins Node](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/blob/main/README.md#infrastructure-setup)**:
+3. **[Tools Installed on Jenkins Node](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/tree/main/Infrastructure-Setup#ci-aws-ec2-instance-for-jenkins-sonarqube-and-nexus)**:
    - Java Development Kit (JDK 17).
    - Maven (version 3 or later).
    - Trivy for scanning filesystem and Docker images.
    - Docker CLI and Kubernetes CLI (`kubectl`).
-   - Kind see **[Infrastructure Setup](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/blob/main/README.md#infrastructure-setup)** in the project `README` for a detailed guide.
+   - Kind see **[Infrastructure Setup](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/tree/main/Infrastructure-Setup)** in the project `README` for a detailed guide.
 
-4. **[Kubernetes Cluster](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/blob/main/README.md#cd--eks-cluster-setup)**:
+4. **[Kubernetes Cluster](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/tree/main/Infrastructure-Setup#cd-eks-cluster-setup)**:
    - A cluster set up with **[Service Account](https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/blob/main/Jenkins_ServiceAccount_RBAC_Scripts)** to allow Jenkins Access.
    - Install Helm for installing Nginx ingress.
    - Install Nginx ingress controller.
        
 ---
 ## Complete Kubernetes Cluster Setup
+In your Kubernetes Cluster,  
 
 ### install helm 
    ```bash
@@ -530,33 +531,86 @@ To execute the pipeline in Jenkins, follow these streamlined steps:
           http://trainbook.com
           ```
        2. You should see the deployed Trainbook application.
+ 
+
+---
+## Why Both Blue and Green Deployment Environment Pods Should Be Left in the Cluster
+
+Leaving both **blue** and **green** deployment environment pods in the cluster ensures a robust and flexible deployment strategy. Here's why this approach is beneficial:
+
+1. **Seamless Rollbacks**  
+   - If an issue arises with the currently active environment (e.g., blue), the green environment remains available and can be switched back quickly without redeployment. This ensures minimal downtime and faster recovery.
+
+2. **Testing and Validation**  
+   - The inactive environment (e.g., green) can be used for further testing and validation of new features or updates without impacting the live environment. This promotes a safer and more controlled deployment process.
+
+3. **Traffic Splitting**  
+   - Having both environments active allows for advanced deployment strategies like **canary deployments** or **A/B testing**, where traffic is gradually split between the blue and green environments to observe performance and user behavior.
+
+4. **Disaster Recovery**  
+   - In the event of unexpected failures, having both environments ensures that one environment remains operational, significantly reducing downtime and maintaining service availability.
+
+5. **Simplified Deployment Workflow**  
+   - Leaving both environments active eliminates the need for re-provisioning pods during every switch. This saves time and resources, especially in high-traffic applications requiring frequent updates.
+
+6. **Consistency Across Updates**  
+   - Both environments ensure that the cluster has a backup ready for use, maintaining operational consistency while changes are being applied.
+
+By maintaining both blue and green environments in the cluster, organizations can achieve high availability, enhance deployment flexibility, and minimize risks during updates or transitions. 
 
 ---
 
+## Checking the Current Environment (Blue or Green)
 
+To determine whether the **blue** or **green** environment is currently serving traffic, follow these steps:
+
+1. **Inspect the Service Selector**
+   - The service `trainbook-service` uses a selector to determine which pods it routes traffic to. You can check the selector's value to see the currently active environment.
+
+   Run the following command:
+   ```bash
+   kubectl get service trainbook-service -n webapps -o yaml
+
+---
 ## Screenshots 
 
-### Deployed Trainbook Application
-![trainbook-application](screenshots/trainbook-application.png)
-![trainbook-application](screenshots/trainbook-application_2.png)
+### 1. Deployed Trainbook Application
+![trainbook-application](../screenshots/trainbook-application.png)
+![trainbook-application](../screenshots/trainbook-application_2.png)
+![trainbook-application](../screenshots/trainbook-application_3.png)
+![trainbook-application](../screenshots/trainbook-application_4.png)
+![trainbook-application](../screenshots/trainbook-application_5.png)
+![trainbook-application](../screenshots/trainbook-application_6.png)
 
-### Pipeline Build with Parameters Trigger
-![Trigger the Pipeline](screenshots/blue_tag-parameterized.png)
-![Trigger the Pipeline](screenshots/green_tag-parameterized.png)
+### 2. Pipeline Build with Parameters Trigger
+![Trigger the Pipeline](../screenshots/blue_tag-parameterized.png)
+![Trigger the Pipeline](../screenshots/green_tag-parameterized.png)
 
-### Email Notification with the Build Status
-![Email-Status-Blue](screenshots/email-blue-success.png)
-![Email-Status-Green](screenshots/email-green-success.png)
-![Email-Status-failed](screenshots/email-failed.png)
+### 3. Email Notification with the Build Status
+![Email-Status-Blue](../screenshots/email-blue-success.png)
+![Email-Status-Green](../screenshots/email-green-success.png)
+![Email-Status-failed](../screenshots/email-failed.png)
 
-### project-credentials
-![project-credentials](screenshots/project-credentials.png)
+### 4. Jenkins Dashboard
+![Jenkins dashboard](../screenshots/Jenkins-dashboard2.png)
+![Jenkins dashboard](../screenshots/build2-parameter.png)
+![Jenkins dashboard](../screenshots/build3-parameter.png)
 
-### SonarQube Server Personal Access token (PAT)
-![SonarQube Server PAT](screenshots/sonar-token.png)
+### 5. Jenkins Stage view
+![Jenkins Stage view](../screenshots/pipeline-stage-view1.png)
+![Jenkins Stage view](../screenshots/pipeline-stage-view2.png)
 
-### Managed Files For Nexus Server
-![Managed Nexus Server Files](screenshots/manged-nexus-server-files.png)
+### 6. project-credentials
+![project-credentials](../screenshots/project-credentials.png)
+
+### 7. SonarQube Server Personal Access token (PAT)
+![SonarQube Server PAT](../screenshots/sonar-token.png)
+
+### 8. Nexus Web View
+![Nexus Web View](../screenshots/nexus.png)
+
+### 8. Managed Files For Nexus Server
+![Managed Nexus Server Files](../screenshots/manged-nexus-server-files.png)
 
 
 
