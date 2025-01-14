@@ -564,12 +564,144 @@ By maintaining both blue and green environments in the cluster, organizations ca
 
 To determine whether the **blue** or **green** environment is currently serving traffic, follow these steps:
 
-1. **Inspect the Service Selector**
+- **Inspect the Service Selector**
    - The service `trainbook-service` uses a selector to determine which pods it routes traffic to. You can check the selector's value to see the currently active environment.
 
    Run the following command:
    ```bash
    kubectl get service trainbook-service -n webapps -o yaml
+   ```
+   Look for the `spec.selector` field in the output. For example:
+   
+   ```bash
+   spec:
+     selector:
+       app: trainbook-app
+       version: blue
+   ```
+   In this case, the active environment is **blue**.
+   
+---
+
+## Troubleshooting Guide
+
+This section provides a detailed troubleshooting guide for common errors that may arise during the project. Follow these steps to identify and resolve issues effectively.
+
+### 1. Pods Stuck in `ContainerCreating` State
+**Cause**: Missing or incorrect configuration, such as invalid volume mounts or incorrect image pulls.  
+**Solution**: 
+- Check pod logs:
+  ```bash
+  kubectl logs <pod-name> -n webapps
+  ```
+- Check pod events:
+  ```bash
+  kubectl describe pod <pod-name> -n webapps
+  ```
+- Look for errors such as "ImagePullBackOff" or "VolumeMount errors."  
+- If it's an image issue:
+  ```bash
+  kubectl get events -n webapps
+  ```
+  Ensure the Docker image tag and credentials are correct.
+- Verify volume claims:
+  ```bash
+  kubectl get pvc -n webapps
+  ```
+
+### 2. Service `trainbook-service` Not Accessible
+**Cause**: Service misconfiguration or external connectivity issues.  
+**Solution**:
+- Check the service details:
+  ```bash
+  kubectl describe svc trainbook-service -n webapps
+  ```
+- Ensure the `ClusterIP` or `LoadBalancer` type is configured properly.
+- If using **MetalLB** in Local Environment, verify it is working:
+  ```bash
+  kubectl get all -n metallb-system
+  ```
+
+### 3. Ingress Not Routing Traffic
+**Cause**: Misconfigured ingress or external DNS issues.  
+**Solution**:
+- Check ingress details:
+  ```bash
+  kubectl describe ingress trinbook-ingress -n webapps
+  ```
+- Ensure the `HOSTS` match the DNS record (e.g., `trainbook.com`).
+- If using NGINX Ingress, verify the ingress controller is running:
+  ```bash
+  kubectl get pods -n ingress-nginx
+  ```
+- Check if the `ADDRESS` field has a valid IP:
+  ```bash
+  kubectl get ingress -n webapps
+  ```
+
+### 4. Switching Traffic manually Between Environments in the cluster. 
+**Cause**: You can Switch Traffic manually in the cluster at any moment without running the pipeline.  
+**Solution**:
+- Verify the service selector:
+  ```bash
+  kubectl get svc trainbook-service -n webapps -o yaml
+  ```
+- Update the selector manually specifying the environment (`green` or `blue`):
+  ```bash
+  kubectl patch service trainbook-service -p '{"spec": {"selector": {"app": "trainbook-app", "version": "green"}}}' -n webapps
+  ```
+
+### 5. Pipeline Failures in Jenkins
+**Cause**: Errors in pipeline stages or incorrect configurations.  
+**Solution**:
+- Check the Jenkins console logs for detailed error messages.
+- **Common Errors**:
+  - **Git Checkout Failure**: Verify `git-cred` and repository URL are correct.
+  - **SonarQube Analysis Fails**: Ensure SonarQube server is reachable and `sonar-server` credentials are valid.
+  - **Docker Build Errors**: Ensure Docker is installed and properly configured on the Jenkins agent.
+  - **Kubernetes Credentials Issue**: Verify the `k8-cred` secret in Jenkins and ensure the Kubernetes API server is accessible.
+
+### 6. Image Scanning with Trivy Fails
+**Cause**: Trivy tool not installed or network issues.  
+**Solution**:
+- Ensure Trivy is installed and accessible on the Jenkins agent:
+  ```bash
+  trivy --version
+  ```
+- Verify network connectivity for pulling vulnerabilities database:
+  ```bash
+  trivy image <image-name>
+  ```
+
+### 7. Deployment Issues in Kubernetes
+**Cause**: Misconfigured manifests or insufficient resources.  
+**Solution**:
+- Check the deployment status:
+  ```bash
+  kubectl get deployment -n webapps
+  kubectl describe deployment <deployment-name> -n webapps
+  ```
+- Verify resource limits and ensure the cluster has sufficient capacity.
+
+### 8. Application Not Accessible After Deployment
+**Cause**: DNS propagation delay or ingress misconfiguration.  
+**Solution**:
+- Ensure the DNS for `trainbook.com` points to the ingress IP.
+- Verify the ingress is exposed and reachable:
+  ```bash
+  curl http://trainbook.com
+  ```
+
+### 9. Email Notifications Not Sent
+**Cause**: Incorrect SMTP configuration in Jenkins.  
+**Solution**:
+- Verify the email configuration in Jenkins:
+  ```bash
+  Manage Jenkins -> Configure System -> E-mail Notification
+  ```
+- Ensure the SMTP server is accessible.
+
+By following these troubleshooting steps, you should be able to resolve most issues encountered during the project. For further assistance, refer to the Kubernetes and Jenkins documentation.
 
 ---
 ## Screenshots 
@@ -606,11 +738,12 @@ To determine whether the **blue** or **green** environment is currently serving 
 ### 7. SonarQube Server Personal Access token (PAT)
 ![SonarQube Server PAT](../screenshots/sonar-token.png)
 
-### 8. Nexus Web View
-![Nexus Web View](../screenshots/nexus.png)
+### 8. SonarQube Server Web View
+![SonarQube Web View](../screenshots/sonarqube.png)
 
-### 8. Managed Files For Nexus Server
-![Managed Nexus Server Files](../screenshots/manged-nexus-server-files.png)
+### 9. Managed Files For Nexus Server
+![Managed Nexus Server Files](../screenshots/nexus.png)
+
 
 
 
