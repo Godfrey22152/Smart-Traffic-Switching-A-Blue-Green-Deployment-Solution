@@ -640,8 +640,8 @@ This section provides a detailed troubleshooting guide for common errors that ma
   ```
 
 ### 4. Switching Traffic manually Between Environments in the cluster. 
-**Cause**: You can Switch Traffic manually in the cluster at any moment without running the pipeline.  
-**Solution**:
+- **You can Switch Traffic manually in the cluster at any moment without running the pipeline**.  
+**How Do This**:
 - Verify the service selector:
   ```bash
   kubectl get svc trainbook-service -n webapps -o yaml
