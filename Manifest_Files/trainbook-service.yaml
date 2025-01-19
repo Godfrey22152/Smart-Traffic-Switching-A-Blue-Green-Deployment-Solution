@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: trainbook-service
+spec:
+  selector:
+    app: trainbook-app
+    version: blue # This can be changed to "green" when switching traffic
+  #type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

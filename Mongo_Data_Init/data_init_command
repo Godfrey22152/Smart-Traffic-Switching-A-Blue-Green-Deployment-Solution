@@ -1,0 +1,1 @@
+mongo "mongodb+srv://Your-database-name:your-password@your-cluster-name.citwf5n.mongodb.net/" mongodb_data.js

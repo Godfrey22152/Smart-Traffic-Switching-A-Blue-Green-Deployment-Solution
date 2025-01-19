@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trainbook-app-green
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trainbook-app
+      version: green
+  template:
+    metadata:
+      labels:
+        app: trainbook-app
+        version: green
+    spec:
+      containers:
+      - name: trainbook-app
+        image: godfrey22152/trainbook-app:green # Adjust the image tag for the green version
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: trainbook-secrets
+              key: DB_URL
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: trainbook-secrets
+              key: DB_NAME
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+

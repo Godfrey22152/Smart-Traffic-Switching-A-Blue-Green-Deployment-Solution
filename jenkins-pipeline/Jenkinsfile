@@ -1,0 +1,230 @@
+pipeline {
+    agent any
+    
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['blue', 'green'], description: 'Choose which environment to deploy: Blue or Green')
+        choice(name: 'DOCKER_TAG', choices: ['blue', 'green'], description: 'Choose the Docker image tag for the deployment')
+        booleanParam(name: 'SWITCH_TRAFFIC', defaultValue: false, description: 'Switch traffic between Blue and Green')
+    }
+    
+    tools {
+        jdk 'jdk17'
+        maven 'maven3'
+    }
+    
+    environment {
+        IMAGE_NAME = "godfrey22152/trainbook-app"
+        TAG = "${params.DOCKER_TAG}"  // The image tag now comes from the parameter
+        KUBE_NAMESPACE = 'webapps'
+        SCANNER_HOME= tool 'sonar-scanner'
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', credentialsId: 'git-cred', url: 'https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution.git'
+            }
+        }
+        
+        stage('Code Compile') {
+            steps {
+                sh "mvn compile"
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh "mvn test"
+            }
+        }
+        
+        stage('Trivy FS scan') {
+            steps {
+                sh "trivy fs --format table -o fs_result.html ."
+            }
+        }
+        
+        stage('Sonarqube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=TrainBooking-App -Dsonar.projectKey=TrainBooking-App \
+                       -Dsonar.java.binaries=target'''
+                }
+                
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh "mvn package"
+            }
+        }
+        
+        stage('Publish Artifacts') {
+            steps {
+                withMaven(globalMavenSettingsConfig: 'maven-settings', jdk: 'jdk17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
+                    sh "mvn deploy"
+                }
+            }
+        } 
+        
+        stage('Docker Build and Tag') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        sh "docker build -t ${IMAGE_NAME}:${TAG} ."
+                    }
+                }
+            }
+        }
+        
+        stage('Docker Image scan by Trivy') {
+            steps {
+                sh "trivy image --format table -o image_scan_result.html ${IMAGE_NAME}:${TAG}"
+            }
+        }
+        
+        stage('Push Docker Image to Dockerhub') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred') {
+                        sh "docker push ${IMAGE_NAME}:${TAG}"
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy Trainbook Secret') {
+            steps {
+                script {
+                    withKubeConfig(caCertificate: '', clusterName: 'Add Your ClusterName', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'Add Your K8s Cluster API Server Endpoint URL') {
+                        sh "kubectl apply -f Manifest_Files/trainbook-secrets.yaml -n ${KUBE_NAMESPACE}"  
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy Trainbook Service') {
+            steps {
+                script {
+                    withKubeConfig(caCertificate: '', clusterName: 'Add Your ClusterName', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'Add Your K8s Cluster API Server Endpoint URL') {
+                        sh """ if ! kubectl get svc trainbook-service -n ${KUBE_NAMESPACE}; then
+                                kubectl apply -f Manifest_Files/trainbook-service.yaml -n ${KUBE_NAMESPACE}
+                              fi
+                        """
+                   }
+                }
+            }
+        }
+        
+        stage('Deploy Trainbook Nginx Ingress') {
+            steps {
+                script {
+                    withKubeConfig(caCertificate: '', clusterName: 'Add Your ClusterName', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'Add Your K8s Cluster API Server Endpoint URL') {
+                        sh "kubectl apply -f Manifest_Files/trainbook-ingress.yaml -n ${KUBE_NAMESPACE}"  
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    def deploymentFile = ""
+                    if (params.DEPLOY_ENV == 'blue') {
+                        deploymentFile = 'Manifest_Files/app-deployment-blue.yaml'
+                    } else {
+                        deploymentFile = 'Manifest_Files/app-deployment-green.yaml'
+                    }
+
+                    withKubeConfig(caCertificate: '', clusterName: 'Add Your ClusterName', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'Add Your K8s Cluster API Server Endpoint URL') {
+                        sh "kubectl apply -f ${deploymentFile} -n ${KUBE_NAMESPACE}"
+                    }
+                }
+            }
+        }
+        
+        stage('Switch Traffic Between Blue & Green Environment') {
+            when {
+                expression { return params.SWITCH_TRAFFIC }
+            }
+            steps {
+                script {
+                    def newEnv = params.DEPLOY_ENV
+
+                    // Always switch traffic based on DEPLOY_ENV
+                    withKubeConfig(caCertificate: '', clusterName: 'Add Your ClusterName', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'Add Your K8s Cluster API Server Endpoint URL') {
+                        sh '''
+                            kubectl patch service trainbook-service -p "{\\"spec\\": {\\"selector\\": {\\"app\\": \\"trainbook-app\\", \\"version\\": \\"''' + newEnv + '''\\"}}}" -n ${KUBE_NAMESPACE}
+                        '''
+                    }
+                    echo "Traffic has been switched to the ${newEnv} environment."
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    def verifyEnv = params.DEPLOY_ENV
+                    withKubeConfig(caCertificate: '', clusterName: 'Add Your ClusterName', contextName: '', credentialsId: 'k8-cred', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'Add Your K8s Cluster API Server Endpoint URL') {
+                        // Sleep for 30 seconds to ensure the deployment has time to stabilize before verification
+                        sh '''
+                           sleep 30
+                        '''
+                        
+                        sh """
+                        kubectl get pods -l version=${verifyEnv} -n ${KUBE_NAMESPACE}
+                        kubectl get svc trainbook-service -n ${KUBE_NAMESPACE}
+                        kubectl get ingress trinbook-ingress -n ${KUBE_NAMESPACE}
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    // Email Notification Code Block
+    post {
+    always {
+        script {
+            def jobName = env.JOB_NAME
+            def buildNumber = env.BUILD_NUMBER
+            def pipelineStatus = (currentBuild?.result != null) ? currentBuild.result : 'SUCCESS'
+            def bannerColor = pipelineStatus.toUpperCase() == 'SUCCESS' ? 'green' : 'red'
+
+            // Include deployment-related information
+            def deployEnv = params.DEPLOY_ENV
+            def dockerTag = params.DOCKER_TAG
+            def deploymentFile = (deployEnv == 'blue') ? 'Manifest_Files/app-deployment-blue.yaml' : 'Manifest_Files/app-deployment-green.yaml'
+
+            def body = """
+                <html>
+                <body>
+                <div style="border: 4px solid ${bannerColor}; padding: 10px;">
+                    <h2>${jobName} - Build ${buildNumber}</h2>
+                    <div style="background-color: ${bannerColor}; padding: 10px;">
+                        <h3 style="color: white;">Pipeline Status: ${pipelineStatus.toUpperCase()}</h3>
+                    </div>
+                    <p><strong>Environment:</strong> ${deployEnv}</p>
+                    <p><strong>Docker Tag:</strong> ${dockerTag}</p>
+                    <p><strong>Deployment File:</strong> ${deploymentFile}</p>
+                    <p><strong>Namespace:</strong> ${env.KUBE_NAMESPACE}</p>
+                    <p>Check the <a href="${env.BUILD_URL}">console output</a> for more details.</p>
+                </div>
+                </body>
+                </html>
+            """
+
+            emailext (
+                subject: "Jenkins Build Notification: ${jobName} - Build ${buildNumber} - ${pipelineStatus.toUpperCase()}",
+                body: body,
+                from: 'jenkins@example.com',
+                to: 'godfreyifeanyi45@gmail.com',
+                replyTo: 'jenkins@example.com',
+                mimeType: 'text/html',
+            )
+        }
+    }
+    }
+}
