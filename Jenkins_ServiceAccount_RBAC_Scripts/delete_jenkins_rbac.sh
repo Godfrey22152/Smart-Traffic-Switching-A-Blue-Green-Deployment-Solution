@@ -2,51 +2,55 @@
 
 # Define namespace
 NAMESPACE="webapps"
+ROLE="app-role"
+ROLEBINDING="app-rolebinding"
+SECRET="jenkins-secret"
+SERVICEACCOUNT="jenkins"
 
 # Delete the Secret
-echo "Deleting Secret jenkins-secret in namespace $NAMESPACE..."
-kubectl delete secret jenkins-secret -n $NAMESPACE
+echo "Deleting Secret $SECRET in namespace $NAMESPACE..."
+kubectl delete secret $SECRET -n $NAMESPACE
 
 # Delete the RoleBinding
-echo "Deleting RoleBinding app-rolebinding in namespace $NAMESPACE..."
-kubectl delete rolebinding app-rolebinding -n $NAMESPACE
+echo "Deleting RoleBinding $ROLEBINDING in namespace $NAMESPACE..."
+kubectl delete rolebinding $ROLEBINDING -n $NAMESPACE
 
 # Delete the Role
-echo "Deleting Role app-role in namespace $NAMESPACE..."
-kubectl delete role app-role -n $NAMESPACE
+echo "Deleting Role $ROLE in namespace $NAMESPACE..."
+kubectl delete role $ROLE -n $NAMESPACE
 
 # Delete the ServiceAccount
-echo "Deleting ServiceAccount jenkins in namespace $NAMESPACE..."
-kubectl delete serviceaccount jenkins -n $NAMESPACE
+echo "Deleting ServiceAccount $SERVICEACCOUNT in namespace $NAMESPACE..."
+kubectl delete serviceaccount $SERVICEACCOUNT -n $NAMESPACE
 
 # Verify that the resources are deleted
 echo "Verifying that all resources are deleted..."
-kubectl get secret jenkins-secret -n $NAMESPACE >/dev/null 2>&1
+kubectl get secret $SECRET -n $NAMESPACE >/dev/null 2>&1
 if [ $? -eq 0 ]; then
-  echo "Error: Secret jenkins-secret was not deleted."
+  echo "Error: Secret $SECRET was not deleted."
 else
-  echo "Secret jenkins-secret deleted successfully."
+  echo "Secret $SECRET deleted successfully."
 fi
 
-kubectl get rolebinding app-rolebinding -n $NAMESPACE >/dev/null 2>&1
+kubectl get rolebinding $ROLEBINDING -n $NAMESPACE >/dev/null 2>&1
 if [ $? -eq 0 ]; then
-  echo "Error: RoleBinding app-rolebinding was not deleted."
+  echo "Error: RoleBinding $ROLEBINDING was not deleted."
 else
-  echo "RoleBinding app-rolebinding deleted successfully."
+  echo "RoleBinding $ROLEBINDING deleted successfully."
 fi
 
-kubectl get role app-role -n $NAMESPACE >/dev/null 2>&1
+kubectl get role $ROLE -n $NAMESPACE >/dev/null 2>&1
 if [ $? -eq 0 ]; then
-  echo "Error: Role app-role was not deleted."
+  echo "Error: Role $ROLE was not deleted."
 else
-  echo "Role app-role deleted successfully."
+  echo "Role $ROLE deleted successfully."
 fi
 
-kubectl get serviceaccount jenkins -n $NAMESPACE >/dev/null 2>&1
+kubectl get serviceaccount $SECRET -n $NAMESPACE >/dev/null 2>&1
 if [ $? -eq 0 ]; then
-  echo "Error: ServiceAccount jenkins was not deleted."
+  echo "Error: ServiceAccount $SECRET was not deleted."
 else
-  echo "ServiceAccount jenkins deleted successfully."
+  echo "ServiceAccount $SECRET deleted successfully."
 fi
 
 #NOTE: If you don't want the Namespace to be deleted, comment-out this section below that handles the namespace deletion.
