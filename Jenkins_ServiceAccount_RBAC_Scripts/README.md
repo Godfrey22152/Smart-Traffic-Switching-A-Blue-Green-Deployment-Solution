@@ -17,51 +17,61 @@ This repository contains the necessary scripts and configurations to automate th
 
   - **Role**: `app-role`, granting access to various Kubernetes resources (pods, services, configmaps, etc.).
 
-    ```bash
+     ```bash
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     metadata:
-    name: app-role
-    namespace: webapps
+      name: app-role
+      namespace: webapps
     rules:
-    - apiGroups:
-            - ""
-            - apps
-            - autoscaling
-            - batch
-            - extensions
-            - policy
-            - rbac.authorization.k8s.io
+
+      # Permissions for core API Group
+      - apiGroups: [""]
         resources:
-        - pods
-        - componentstatuses
-        - configmaps
-        - daemonsets
-        - deployments
-        - events
-        - endpoints
-        - horizontalpodautoscalers
-        - ingress
-        - jobs
-        - limitranges
-        - namespaces
-        - nodes
-        - secrets
-        - pods
-        - persistentvolumes
-        - persistentvolumeclaims
-        - resourcequotas
-        - replicasets
-        - replicationcontrollers
-        - serviceaccounts
-        - services
+          - pods
+          - configmaps
+          - events
+          - endpoints
+          - namespaces
+          - nodes
+          - secrets
+          - persistentvolumes
+          - persistentvolumeclaims
+          - resourcequotas
+          - replicationcontrollers
+          - services
+          - serviceaccounts
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+      # Permissions for app API group
+      - apiGroups: ["apps"]
+        resources:
+          - deployments
+          - replicasets
+          - daemonsets
+          - statefulsets
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+      # Permissions for Networking API group
+      - apiGroups: ["networking.k8s.io"]
+        resources:
+          - ingresses
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+
+      # Permissions for Autoscaling API group
+      - apiGroups: ["autoscaling"]
+        resources:
+          - horizontalpodautoscalers
+        verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+      # Permissions for batch API Group
+      - apiGroups: ["batch"]
+        resources:
+          - jobs
+          - cronjobs
         verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
     
-     - apiGroups: ["networking.k8s.io"]
-       resources:
-       - ingresses
-       verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-        
     ```
 
   - **RoleBinding**: `app-rolebinding`, binding the role to the `jenkins` ServiceAccount.
@@ -115,8 +125,8 @@ To create the Jenkins ServiceAccount and associated RBAC resources, run the `cre
 1. Clone the repository and navigate to the project directory.
 
    ```bash
-   git clone https://github.com/Godfrey22152/Kubernetes-RBAC-Management-Scripts.git
-   cd Kubernetes-RBAC-Management-Scripts/Jenkins_ServiceAccount_RBAC_Scripts
+   git clone https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution.git
+   cd Jenkins_ServiceAccount_RBAC_Scripts
    ```
 2. Make the `create_jenkins_rbac.sh` script executable:
    ```bash
