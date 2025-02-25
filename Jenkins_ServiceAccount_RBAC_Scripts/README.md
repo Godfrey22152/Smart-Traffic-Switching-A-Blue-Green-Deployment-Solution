@@ -126,7 +126,7 @@ To create the Jenkins ServiceAccount and associated RBAC resources, run the `cre
 
    ```bash
    git clone https://github.com/Godfrey22152/Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution.git
-   cd Jenkins_ServiceAccount_RBAC_Scripts
+   cd Smart-Traffic-Switching-A-Blue-Green-Deployment-Solution/Jenkins_ServiceAccount_RBAC_Scripts
    ```
 2. Make the `create_jenkins_rbac.sh` script executable:
    ```bash
