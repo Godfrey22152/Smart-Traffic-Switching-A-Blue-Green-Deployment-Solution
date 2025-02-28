@@ -69,8 +69,8 @@ In your Kubernetes Cluster,
    We can also add that manifest to our git repo if we are using a GitOps workflow to deploy it.
 
    ```bash
-   CHART_VERSION="4.4.0"
-   APP_VERSION="1.5.1"
+   CHART_VERSION="4.11.3"
+   APP_VERSION="1.11.3"
 
    mkdir ./nginx-ingress-manifests
 
